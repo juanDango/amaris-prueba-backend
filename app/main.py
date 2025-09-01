@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from routers import funds, auth
 
 app = FastAPI()
 
@@ -16,3 +17,6 @@ app.add_middleware(
 async def root():
     return {"message": "Hello World"}
 
+# Se corrigen las llamadas para incluir los routers
+app.include_router(funds.router)
+app.include_router(auth.router)

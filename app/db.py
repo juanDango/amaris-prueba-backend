@@ -28,7 +28,12 @@ def get_secret():
     # Debemos devolver solo esta cadena, no el objeto completo.
     return get_secret_value_response['SecretString']
 
+def get_connection_string():
 
+    if settings.env == "local":
+        return settings.mongo_uri
+    else:
+        return get_secret()
 # Creaa la conexion a la base de datos MongoDB
-client = MongoClient(get_secret())
+client = MongoClient(get_connection_string())
 db = client[settings.mongo_db]

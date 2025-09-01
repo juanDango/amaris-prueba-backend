@@ -1,3 +1,14 @@
+resource "aws_key_pair" "amaris-key" {
+  key_name   = "amaris-key"
+  public_key = file("~/.ssh/terraform_rsa.pub")
+}
+
+data "archive_file" "app_tgz" {
+  type        = "zip"
+  source_dir  = "../app"
+  output_path = "${path.module}/app.zip"
+}
+
 resource "aws_instance" "amaris-webserver" {
   ami                         = "ami-04b70fa74e45c3917"
   associate_public_ip_address = true
@@ -9,6 +20,19 @@ resource "aws_instance" "amaris-webserver" {
     volume_size           = 10
     volume_type           = "gp3"
   }
+  key_name = aws_key_pair.amaris-key.key_name
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = file("~/.ssh/terraform_rsa")
+    host        = self.public_ip
+  }
+
 
   tags = {
     Name       = "amaris-ec2"
@@ -16,6 +40,26 @@ resource "aws_instance" "amaris-webserver" {
     Project    = local.Project
     CostCenter = local.CostCenter
   }
+
+  provisioner "file" {
+    source      = "${path.module}/app.zip"
+    destination = "/home/ubuntu/app.zip"
+  }
+
+  # Ejecuta docker build y run
+  provisioner "remote-exec" {
+    inline = [
+      "sudo apt-get update -y",
+      "sudo apt-get install -y docker.io unzip",
+      "sudo systemctl enable docker",
+      "sudo systemctl start docker",
+      "sudo unzip -o /home/ubuntu/app.zip",
+      "cd /home/ubuntu",
+      "sudo docker build -t fastapi-app .",
+      "sudo docker run -d -p 80:8000 fastapi-app",
+    ]
+  }
+
 }
 
 
@@ -38,6 +82,21 @@ resource "aws_security_group" "amaris-public-http-traffic" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
     description = "Allow HTTPS traffic from anywhere"
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # ⚠️ Esto abre SSH desde cualquier lado
+    description = "Allow SSH access"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {

@@ -8,7 +8,7 @@ class FundsCategories(str, Enum):
 
 class FundsOut(BaseModel):
     """Esquema de salida para los fondos."""
-    id: int
+    id: str
     name: str
     min_amount: int
     category: FundsCategories

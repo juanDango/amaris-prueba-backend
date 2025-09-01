@@ -19,23 +19,20 @@ sms_notifier = SMSNotifier()
 router = APIRouter(prefix="/funds", tags=["funds"])
 
 
-@router.get("/{fund_id}")
+@router.get("/{fund_id}", response_model=FundsOut)
 async def read_fund(fund_id: str):
     """Obtiene un fondo por su ID.
 
     Args:
-        fund_id (str): El ID del fondo a recuperar.
+        fund_id (int): El ID del fondo a recuperar.
 
     Returns:
-        dict: Los detalles del fondo.
+        FundsOut: Los detalles del fondo.
     """
-    try:
-        fund = get_fund_by_id(fund_id)
-        if not fund:
-            raise HTTPException(status_code=404, detail="Fund not found")
-        return fund
-    except InvalidId:
-        raise HTTPException(status_code=400, detail=f"Invalid fund ID: {fund_id}")
+    fund = get_fund_by_id(fund_id)
+    if not fund:
+        raise HTTPException(status_code=404, detail="Fund not found")
+    return fund
     
 @router.get("/category/{category}")
 async def read_funds_by_category(category: FundsCategories):   
@@ -107,12 +104,9 @@ async def create_transactions(
         raise HTTPException(status_code=404, detail="User not found")
 
     # Verificar que el fondo existe
-    try:
-        fund = get_fund_by_id(transaction_in.fund_id)
-        if not fund:
-            raise HTTPException(status_code=404, detail="Fund not found")
-    except InvalidId:
-        raise HTTPException(status_code=400, detail=f"Invalid fund ID: {transaction_in.fund_id}")
+    fund = get_fund_by_id(transaction_in.fund_id)
+    if not fund:
+        raise HTTPException(status_code=404, detail="Fund not found")
 
     # Obtener todas las transacciones del usuario para este fondo
     fund_transactions = get_transactions_by_user_and_fund(user.id, transaction_in.fund_id)
